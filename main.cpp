@@ -149,8 +149,12 @@ int main() {
   auto classification_rate =
       network.classification_rate(test_images, test_label_vectors);
   CAPTURE(classification_rate);
-  for (size_t i = 0; i < 30; ++i) {
-    network.train(train_images, train_label_vectors, 1, 10, 3.0);
+  for (size_t i = 0; i < 50; ++i) {
+    const auto start = chrono::high_resolution_clock::now();
+    network.train(train_images, train_label_vectors, 1, 16, 3.0);
+    const auto end = chrono::high_resolution_clock::now();
+    const auto time = chrono::duration<float>(end - start).count();
+    cout << "time = " << time << " s" << '\n';
     classification_rate =
         network.classification_rate(test_images, test_label_vectors);
     CAPTURE(classification_rate);

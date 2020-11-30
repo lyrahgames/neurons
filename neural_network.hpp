@@ -137,42 +137,35 @@ struct neural_network {
     return static_cast<real>(result) / inputs.size();
   }
 
-  // auto simple_backprop(const vector& input, const vector& label) {
-  //   std::vector<vector> inputs(size(sizes) - 1);
-  //   std::vector<vector> outputs(size(sizes) - 1);
+  auto simple_backprop(const vector& input, const vector& label) {
+    std::vector<vector> inputs(size(sizes) - 1);
+    std::vector<vector> outputs(size(sizes) - 1);
 
-  //   const auto activation = sigmoid<real>;
-  //   const auto d_activation = d_sigmoid<real>;
+    const auto activation = sigmoid<real>;
+    const auto d_activation = d_sigmoid<real>;
 
-  //   inputs[0] = weights[0] * input + biases[0];
-  //   outputs[0] = inputs[0].unaryExpr(activation);
-  //   for (size_t i = 1; i < size(sizes) - 1; ++i) {
-  //     inputs[i] = weights[i] * outputs[i - 1] + biases[i];
-  //     outputs[i] = inputs[i].unaryExpr(activation);
-  //   }
+    inputs[0] = weights[0] * input + biases[0];
+    outputs[0] = inputs[0].unaryExpr(activation);
+    for (size_t i = 1; i < size(sizes) - 1; ++i) {
+      inputs[i] = weights[i] * outputs[i - 1] + biases[i];
+      outputs[i] = inputs[i].unaryExpr(activation);
+    }
 
-  //   vector buffer = (label - outputs.back()).array() *
-  //                   inputs.back().array().unaryExpr(d_activation);
+    vector buffer = (label - outputs.back()).array() *
+                    inputs.back().array().unaryExpr(d_activation);
 
-  //   for (auto i = size(sizes) - 2; i > 0; --i) {
-  //     buffers = (weights[i].transpose() * buffers).array() *
-  //               inputs[i - 1].array().unaryExpr(d_activation);
-  //     while (wait)
-  //       ;
-  //     wait = true;
-  //     // negative gradient
-  //     weight_gradients[i] += buffers[i] * outputs[i - 1].transpose();
-  //     bias_gradients[i] += buffers[i];
-  //     wait = false;
-  //   }
-  //   while (wait)
-  //     ;
-  //   wait = true;
-  //   // negative gradient
-  //   weight_gradients[0] += buffers[0] * input.transpose();
-  //   bias_gradients[0] += buffers[0];
-  //   wait = false;
-  // }
+    for (auto i = size(sizes) - 2; i > 0; --i) {
+      // negative gradient
+      weight_gradients[i] += buffer * outputs[i - 1].transpose();
+      bias_gradients[i] += buffer;
+      //
+      buffer = (weights[i].transpose() * buffer).array() *
+               inputs[i - 1].array().unaryExpr(d_activation);
+    }
+    // negative gradient
+    weight_gradients[0] += buffer * input.transpose();
+    bias_gradients[0] += buffer;
+  }
 
   void backprop(const vector& input, const vector& label) {
     const auto activation = sigmoid<real>;
@@ -210,9 +203,11 @@ struct neural_network {
               matrix::Zero(weights[j].rows(), weights[j].cols());
           bias_gradients[j] = vector::Zero(biases[j].size());
         }
+#pragma omp parallel for
         for (size_t k = 0; k < batch_size; ++k) {
-          forward_feed(inputs[indices[i + k]]);
-          backprop(inputs[indices[i + k]], labels[indices[i + k]]);
+          // forward_feed(inputs[indices[i + k]]);
+          // backprop(inputs[indices[i + k]], labels[indices[i + k]]);
+          simple_backprop(inputs[indices[i + k]], labels[indices[i + k]]);
         }
         for (auto j = 0; j < size(sizes) - 1; ++j) {
           weights[j] += learning_rate * weight_gradients[j] / batch_size;
