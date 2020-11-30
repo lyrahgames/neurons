@@ -4,6 +4,6 @@ using cxx
 hxx{*}: extension = hpp
 cxx{*}: extension = cpp
 
-cxx.poptions =+ "-I$src_base"
+cxx.poptions =+ "-I$src_base" "-I/usr/include/eigen3"
 
-exe{main}: cxx{main} hxx{**}
+exe{main}: cxx{main} hxx{**} $libs
