@@ -143,28 +143,59 @@ int main() {
     }
   }
 
-  // gpp plot{};
-  // for (size_t n = 0; n < 2; ++n) {
-  //   fstream file{"digit.dat", ios::out};
-  //   for (int i = 0; i < 28; ++i) {
-  //     for (int j = 0; j < 28; ++j) {
-  //       file << train_images[n][28 * (28 - 1 - i) + j] << '\t';
-  //     }
-  //     file << '\n';
-  //   }
-  //   file << flush;
-  //   plot << "plot 'digit.dat' matrix with image\n";
-  //   this_thread::sleep_for(5ms);
-  // }
+  fstream learn_file{"learning.dat", ios::out};
 
   neural_network network{28 * 28, 30, 10};
   auto classification_rate =
       network.classification_rate(test_images, test_label_vectors);
   CAPTURE(classification_rate);
   for (size_t i = 0; i < 30; ++i) {
-    network.train(train_images, train_label_vectors, 1, 100, 3.0);
+    network.train(train_images, train_label_vectors, 1, 10, 3.0);
     classification_rate =
         network.classification_rate(test_images, test_label_vectors);
     CAPTURE(classification_rate);
+    auto training_rate =
+        network.classification_rate(train_images, train_label_vectors);
+    // CAPTURE(training_rate);
+    auto test_error =
+        network.mean_squared_error(test_images, test_label_vectors);
+    auto train_error =
+        network.mean_squared_error(train_images, train_label_vectors);
+    learn_file << i << '\t' << training_rate << '\t' << train_error << '\t'
+               << classification_rate << '\t' << test_error << '\n';
+  }
+  learn_file << flush;
+  gpp classification_plot{};
+  classification_plot << "plot 'learning.dat' u 1:2 w l title 'training', "  //
+                         "'' u 1:4 w l title 'test'\n";
+  gpp error_plot{};
+  error_plot << "plot 'learning.dat' u 1:3 w l title 'training', "  //
+                "'' u 1:5 w l title 'test'\n";
+
+  gpp plot{};
+  gpp pplot{};
+  for (size_t n = 0; n < test_images.size(); ++n) {
+    fstream file{"digit.dat", ios::out};
+    for (int i = 0; i < 28; ++i) {
+      for (int j = 0; j < 28; ++j) {
+        file << test_images[n][28 * (28 - 1 - i) + j] << '\t';
+      }
+      file << '\n';
+    }
+    file << flush;
+    plot << "plot 'digit.dat' matrix with image\n";
+
+    neural_network::vector output = network(test_images[n]);
+    fstream pfile{"output.dat", ios::out};
+    for (int i = 0; i < 10; ++i) pfile << i << '\t' << output[i] << '\n';
+    pfile << flush;
+    pplot << "plot 'output.dat' using 1:2 w l\n";
+
+    cout << test_labels[n] << '\t' << network.classification(test_images[n])
+         << endl;
+
+    // this_thread::sleep_for(1s);
+    string str;
+    getline(cin, str);
   }
 }

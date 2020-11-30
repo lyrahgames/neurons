@@ -61,7 +61,7 @@ struct neural_network {
     return result;
   }
 
-  auto forward_feed(const vector& input) {
+  void forward_feed(const vector& input) {
     assert(input.size() == sizes[0]);
     const auto activation = sigmoid<real>;
     layer_inputs[0] = weights[0] * input + biases[0];
@@ -70,6 +70,11 @@ struct neural_network {
       layer_inputs[i] = weights[i] * layer_outputs[i - 1] + biases[i];
       layer_outputs[i] = layer_inputs[i].unaryExpr(activation);
     }
+  }
+
+  auto operator()(const vector& input) {
+    assert(input.size() == sizes[0]);
+    return simple_forward_feed(input);
   }
 
   auto squared_error(const vector& input, const vector& label) {
@@ -88,6 +93,15 @@ struct neural_network {
     for (size_t i = 0; i < inputs.size(); ++i)
       result += squared_error(inputs[i], labels[i]);
     return result / inputs.size();
+  }
+
+  auto classification(const vector& input) {
+    vector output = simple_forward_feed(input);
+    size_t output_maxarg = 0;
+    for (size_t j = 1; j < output.size(); ++j)
+      output_maxarg =
+          (output[output_maxarg] < output[j]) ? (j) : (output_maxarg);
+    return output_maxarg;
   }
 
   auto classification_rate(const std::vector<vector>& inputs,
